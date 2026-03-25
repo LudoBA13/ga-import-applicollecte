@@ -53,7 +53,7 @@ function exportAssoConnect(groupName)
 		return;
 	}
 
-	const fileName = 'Export_AssoConnect_' + groupName + '_' + Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd_HH-mm') + '.xlsx';
+	const fileName = 'Import_AssoConnect_' + groupName + '_' + Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd_HH-mm') + '.xlsx';
 	const html = HtmlService.createTemplateFromFile('DownloadDialog');
 	html.fileName = fileName;
 	html.groupName = groupName;
