@@ -5,6 +5,10 @@ function onOpen()
 		.addItem('Importer AssoConnect', 'importAssoConnect')
 		.addItem('Importer AppliCollecte', 'importAppliCollecte')
 		.addToUi();
+
+	ui.createMenu('Exporter')
+		.addItem('AssoConnect', 'exportAssoConnect')
+		.addToUi();
 }
 
 function importAssoConnect()
@@ -15,6 +19,66 @@ function importAssoConnect()
 function importAppliCollecte()
 {
 	showImportDialog('AppliCollecte');
+}
+
+function exportAssoConnect()
+{
+	const ss = SpreadsheetApp.getActiveSpreadsheet();
+	const sheet = ss.getSheetByName('Export');
+
+	if (!sheet)
+	{
+		SpreadsheetApp.getUi().alert('La feuille "Export" n\'existe pas.');
+		return;
+	}
+
+	const fileName = 'Export_AssoConnect_' + Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd_HH-mm') + '.xlsx';
+	const html = HtmlService.createTemplateFromFile('DownloadDialog');
+	html.fileName = fileName;
+
+	const interface = html.evaluate()
+		.setWidth(400)
+		.setHeight(150);
+
+	SpreadsheetApp.getUi().showModalDialog(interface, 'Exportation AssoConnect');
+}
+
+/**
+ * Generates the XLSX file and returns the download URL.
+ *
+ * @returns {string} The base64 data of the XLSX file.
+ */
+function getExportData()
+{
+	const ss = SpreadsheetApp.getActiveSpreadsheet();
+	const exportSheet = ss.getSheetByName('Export');
+
+	// Create a temporary spreadsheet
+	const tempSS = SpreadsheetApp.create('TempExport');
+	const tempSheet = tempSS.getSheets()[0];
+
+	// Copy data
+	const data = exportSheet.getDataRange().getValues();
+	tempSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+
+	const tempId = tempSS.getId();
+	SpreadsheetApp.flush();
+
+	// Fetch the file as XLSX via Drive API
+	const url = 'https://www.googleapis.com/drive/v3/files/' + tempId + '/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+	const token = ScriptApp.getOAuthToken();
+	const response = UrlFetchApp.fetch(url, {
+		headers: {
+			'Authorization': 'Bearer ' + token
+		}
+	});
+
+	const base64Data = Utilities.base64Encode(response.asBlob().getBytes());
+
+	// Cleanup
+	Drive.Files.remove(tempId);
+
+	return base64Data;
 }
 
 function showImportDialog(source)
