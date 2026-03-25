@@ -73,7 +73,7 @@ function getExportData()
 		}
 	});
 
-	const base64Data = Utilities.base64Encode(response.asBlob().getBytes());
+	const base64Data = Utilities.base64Encode(response.getBlob().getBytes());
 
 	// Cleanup
 	Drive.Files.remove(tempId);
