@@ -2,12 +2,17 @@ function onOpen()
 {
 	const ui = SpreadsheetApp.getUi();
 	ui.createMenu('Importer')
-		.addItem('Importer AssoConnect', 'importAssoConnect')
-		.addItem('Importer AppliCollecte', 'importAppliCollecte')
+		.addItem('Importer de AssoConnect', 'importAssoConnect')
+		.addItem('Importer de AppliCollecte', 'importAppliCollecte')
 		.addToUi();
 
+	const exportAssoMenu = ui.createMenu('Exporter vers AssoConnect')
+		.addItem('Groupe AppliCollecte', 'exportAssoConnectAppliCollecte')
+		.addItem('Groupe Associations', 'exportAssoConnectAssociations')
+		.addItem('Groupe Partenariat', 'exportAssoConnectPartenariat');
+
 	ui.createMenu('Exporter')
-		.addItem('AssoConnect', 'exportAssoConnect')
+		.addSubMenu(exportAssoMenu)
 		.addToUi();
 }
 
@@ -21,37 +26,55 @@ function importAppliCollecte()
 	showImportDialog('AppliCollecte');
 }
 
-function exportAssoConnect()
+function exportAssoConnectAppliCollecte()
+{
+	exportAssoConnect('AppliCollecte');
+}
+
+function exportAssoConnectAssociations()
+{
+	exportAssoConnect('Associations');
+}
+
+function exportAssoConnectPartenariat()
+{
+	exportAssoConnect('Partenariat');
+}
+
+function exportAssoConnect(groupName)
 {
 	const ss = SpreadsheetApp.getActiveSpreadsheet();
-	const sheet = ss.getSheetByName('Export');
+	const sheetName = 'Import-' + groupName;
+	const sheet = ss.getSheetByName(sheetName);
 
 	if (!sheet)
 	{
-		SpreadsheetApp.getUi().alert('La feuille "Export" n\'existe pas.');
+		SpreadsheetApp.getUi().alert('La feuille "' + sheetName + '" n\'existe pas.');
 		return;
 	}
 
-	const fileName = 'Export_AssoConnect_' + Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd_HH-mm') + '.xlsx';
+	const fileName = 'Export_AssoConnect_' + groupName + '_' + Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd_HH-mm') + '.xlsx';
 	const html = HtmlService.createTemplateFromFile('DownloadDialog');
 	html.fileName = fileName;
+	html.groupName = groupName;
 
 	const interface = html.evaluate()
 		.setWidth(400)
 		.setHeight(150);
 
-	SpreadsheetApp.getUi().showModalDialog(interface, 'Exportation AssoConnect');
+	SpreadsheetApp.getUi().showModalDialog(interface, 'Exportation AssoConnect - ' + groupName);
 }
 
 /**
  * Generates the XLSX file and returns the download URL.
  *
+ * @param {string} groupName
  * @returns {string} The base64 data of the XLSX file.
  */
-function getExportData()
+function getExportData(groupName)
 {
 	const ss = SpreadsheetApp.getActiveSpreadsheet();
-	const exportSheet = ss.getSheetByName('Export');
+	const exportSheet = ss.getSheetByName('Import-' + groupName);
 
 	// Create a temporary spreadsheet
 	const tempSS = SpreadsheetApp.create('TempExport');
