@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<base target="_top">
+		<style>
+			body {
+				font-family: sans-serif;
+				padding: 20px;
+			}
+			.container {
+				display: flex;
+				flex-direction: column;
+				gap: 15px;
+			}
+			#message {
+				font-size: 0.9em;
+				margin-top: 10px;
+			}
+			.error {
+				color: red;
+			}
+			.success {
+				color: green;
+			}
+			input[type="file"] {
+				margin-bottom: 10px;
+			}
+			button {
+				padding: 8px 16px;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div>Sélectionnez le fichier d'export des personnes de <?= source ?></div>
+			<input type="file" id="fileInput" accept=".xlsx">
+			<button id="uploadButton" onclick="uploadFile()">Importer</button>
+			<div id="message"></div>
+		</div>
+		
+		<script>
+			function uploadFile()
+			{
+				const fileInput = document.getElementById('fileInput');
+				const button = document.getElementById('uploadButton');
+				const message = document.getElementById('message');
+				
+				if (fileInput.files.length === 0)
+				{
+					message.textContent = 'Veuillez sélectionner un fichier.';
+					message.className = 'error';
+					return;
+				}
+				
+				const file = fileInput.files[0];
+				const reader = new FileReader();
+				
+				button.disabled = true;
+				message.textContent = 'Importation en cours...';
+				message.className = '';
+				
+				reader.onload = function(e)
+				{
+					const base64Data = e.target.result.split(',')[1];
+					const source = "<?= source ?>";
+					
+					google.script.run
+						.withSuccessHandler(function(response)
+						{
+							message.textContent = response;
+							message.className = 'success';
+							setTimeout(function()
+							{
+								google.script.host.close();
+							}, 2000);
+						})
+						.withFailureHandler(function(err)
+						{
+							message.textContent = err.message;
+							message.className = 'error';
+							button.disabled = false;
+						})
+						.processUpload(base64Data, file.name, source);
+				};
+				
+				reader.readAsDataURL(file);
+			}
+		</script>
+	</body>
+</html>
