@@ -73,35 +73,48 @@ function exportAssoConnect(groupName)
  */
 function getExportData(groupName)
 {
-	const ss = SpreadsheetApp.getActiveSpreadsheet();
-	const exportSheet = ss.getSheetByName('Import-' + groupName);
+	let tempId = null;
+	try
+	{
+		const ss = SpreadsheetApp.getActiveSpreadsheet();
+		const exportSheet = ss.getSheetByName('Import-' + groupName);
 
-	// Create a temporary spreadsheet
-	const tempSS = SpreadsheetApp.create('TempExport');
-	const tempSheet = tempSS.getSheets()[0];
+		// Create a temporary spreadsheet
+		const tempSS = SpreadsheetApp.create('TempExport');
+		tempId = tempSS.getId();
+		const tempSheet = tempSS.getSheets()[0];
 
-	// Copy data
-	const data = exportSheet.getDataRange().getValues();
-	tempSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+		// Copy data
+		const data = exportSheet.getDataRange().getValues();
+		tempSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
 
-	const tempId = tempSS.getId();
-	SpreadsheetApp.flush();
+		SpreadsheetApp.flush();
 
-	// Fetch the file as XLSX via Drive API
-	const url = 'https://www.googleapis.com/drive/v3/files/' + tempId + '/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-	const token = ScriptApp.getOAuthToken();
-	const response = UrlFetchApp.fetch(url, {
-		headers: {
-			'Authorization': 'Bearer ' + token
+		// Fetch the file as XLSX via Drive API
+		const url = 'https://www.googleapis.com/drive/v3/files/' + tempId + '/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+		const token = ScriptApp.getOAuthToken();
+		const response = UrlFetchApp.fetch(url, {
+			headers: {
+				'Authorization': 'Bearer ' + token
+			}
+		});
+
+		const base64Data = Utilities.base64Encode(response.getBlob().getBytes());
+
+		return base64Data;
+	}
+	catch (e)
+	{
+		console.error(e);
+		throw e;
+	}
+	finally
+	{
+		if (tempId)
+		{
+			Drive.Files.remove(tempId);
 		}
-	});
-
-	const base64Data = Utilities.base64Encode(response.getBlob().getBytes());
-
-	// Cleanup
-	Drive.Files.remove(tempId);
-
-	return base64Data;
+	}
 }
 
 function showImportDialog(source)
@@ -151,6 +164,7 @@ function isValidFile(sheet, source)
  */
 function processUpload(base64Data, fileName, source)
 {
+	let tempId = null;
 	try
 	{
 		const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), MimeType.MICROSOFT_EXCEL, fileName);
@@ -161,7 +175,7 @@ function processUpload(base64Data, fileName, source)
 			mimeType: MimeType.GOOGLE_SHEETS
 		};
 		const tempFile = Drive.Files.insert(resource, blob, {convert: true});
-		const tempId = tempFile.id;
+		tempId = tempFile.id;
 
 		const tempSpreadsheet = SpreadsheetApp.openById(tempId);
 		const tempSheet = tempSpreadsheet.getSheets()[0];
@@ -169,7 +183,6 @@ function processUpload(base64Data, fileName, source)
 		// 2. Validate
 		if (!isValidFile(tempSheet, source))
 		{
-			Drive.Files.remove(tempId);
 			throw new Error('Le fichier n\'est pas valide pour l\'importation ' + source + '.');
 		}
 
@@ -190,14 +203,18 @@ function processUpload(base64Data, fileName, source)
 			targetSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
 		}
 
-		// 4. Cleanup
-		Drive.Files.remove(tempId);
-
 		return 'L\'importation de ' + source + ' a été effectuée avec succès.';
 	}
 	catch (e)
 	{
 		console.error(e);
 		throw new Error('Erreur lors de l\'importation : ' + e.message);
+	}
+	finally
+	{
+		if (tempId)
+		{
+			Drive.Files.remove(tempId);
+		}
 	}
 }
