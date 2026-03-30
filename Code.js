@@ -146,6 +146,25 @@ function validateAssoConnectFile(sheet)
 }
 
 /**
+ * Validates requirements specific to AppliCollecte.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @throws {Error} if validation fails.
+ */
+function validateAppliCollecteFile(sheet)
+{
+	if (sheet.getLastRow() < 4)
+	{
+		throw new Error('Le fichier AppliCollecte est trop court.');
+	}
+
+	const cellA4Value = sheet.getRange(4, 1).getValue();
+	if (cellA4Value !== 'Nom du bénévole')
+	{
+		throw new Error('La cellule A4 ne contient pas "Nom du bénévole".');
+	}
+}
+
+/**
  * Validates the imported sheet.
  * Throws an error with a descriptive message if the sheet is invalid.
  *
@@ -167,6 +186,10 @@ function validateFile(sheet, source)
 	if (source === 'AssoConnect')
 	{
 		validateAssoConnectFile(sheet);
+	}
+	else if (source === 'AppliCollecte')
+	{
+		validateAppliCollecteFile(sheet);
 	}
 }
 
