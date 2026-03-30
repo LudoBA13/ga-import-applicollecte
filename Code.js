@@ -149,8 +149,15 @@ function isValidFile(sheet, source)
 		return false;
 	}
 
-	// Add more specific validation here if needed
-	// e.g., check for mandatory headers
+	// Source-specific validation
+	if (source === 'AssoConnect')
+	{
+		const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+		if (!headers.includes('Prénom'))
+		{
+			return false;
+		}
+	}
 
 	return true;
 }
