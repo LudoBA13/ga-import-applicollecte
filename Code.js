@@ -130,15 +130,29 @@ function showImportDialog(source)
 }
 
 /**
+ * Validates requirements specific to AssoConnect.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @throws {Error} if validation fails.
+ */
+function validateAssoConnectFile(sheet)
+{
+	const lastColumn = sheet.getLastColumn();
+	const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+
+	if (!headers.includes('Prénom'))
+	{
+		throw new Error('Le header "Prénom" est manquant.');
+	}
+}
+
+/**
  * Validates the imported sheet.
- * For now, it checks if the sheet is not empty.
- * This can be expanded with specific header checks for each source.
+ * Throws an error with a descriptive message if the sheet is invalid.
  *
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet The sheet to validate.
  * @param {string} source The source name ('AssoConnect' or 'AppliCollecte').
- * @returns {boolean}
  */
-function isValidFile(sheet, source)
+function validateFile(sheet, source)
 {
 	const lastRow = sheet.getLastRow();
 	const lastColumn = sheet.getLastColumn();
@@ -146,20 +160,14 @@ function isValidFile(sheet, source)
 	// Basic validation: sheet must have data
 	if (lastRow < 1 || lastColumn < 1)
 	{
-		return false;
+		throw new Error('Le fichier est vide.');
 	}
 
 	// Source-specific validation
 	if (source === 'AssoConnect')
 	{
-		const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
-		if (!headers.includes('Prénom'))
-		{
-			return false;
-		}
+		validateAssoConnectFile(sheet);
 	}
-
-	return true;
 }
 
 /**
@@ -188,10 +196,7 @@ function processUpload(base64Data, fileName, source)
 		const tempSheet = tempSpreadsheet.getSheets()[0];
 
 		// 2. Validate
-		if (!isValidFile(tempSheet, source))
-		{
-			throw new Error('Le fichier n\'est pas valide pour l\'importation ' + source + '.');
-		}
+		validateFile(tempSheet, source);
 
 		// 3. Replace content in target sheet
 		const ss = SpreadsheetApp.getActiveSpreadsheet();
